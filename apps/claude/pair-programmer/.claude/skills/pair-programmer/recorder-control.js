@@ -611,11 +611,6 @@ const contextBuffer = {
   },
 };
 
-// Hide dock icon (menu bar app)
-if (process.platform === "darwin") {
-  app.dock.hide();
-}
-
 // =============================================================================
 // VideoDB SDK Integration
 // =============================================================================
@@ -1524,6 +1519,11 @@ function registerAssistantShortcut() {
 // =============================================================================
 
 app.whenReady().then(async () => {
+  // Hide dock icon (menu bar app) - must be after app is ready
+  if (process.platform === "darwin" && app.dock) {
+    app.dock.hide();
+  }
+
   try {
     console.log("Starting VideoDB Recorder...");
     console.log("Config:", {
