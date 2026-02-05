@@ -8,9 +8,7 @@
     "start": "./scripts/start-server.sh",
     "electron": "electron .",
     "dist": "electron-builder",
-    "pack": "electron-builder --dir",
-    "reset-permissions": "bash scripts/reset-permissions.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pack": "electron-builder --dir"
   },
   "keywords": [],
   "author": "VideoDB",
