@@ -1459,55 +1459,35 @@
 
         <!-- Onboarding Modal -->
         <div id="onboardingModal" class="modal-overlay">
-            <div class="modal-content">
-                <img src="img/logo.jpeg" alt="VideoDB Logo" class="modal-logo">
-                <h2 class="modal-title">Welcome to Async Recorder</h2>
-                <p class="modal-subtitle">
-                    Connect your VideoDB account to start recording.<br>
-                    Your API Key will be securely stored on the backend.
-                </p>
+            <div class="modal-content" style="width: 400px; text-align: center;">
+                <img src="img/logo.jpeg" alt="VideoDB" style="height: 40px; margin-bottom: 15px; border-radius: 8px;">
+                <div class="modal-title">Connect to VideoDB</div>
+                <div class="modal-subtitle">
+                    Enter your API key to start recording.
+                </div>
 
-                <div class="input-group">
+                <div class="input-group" style="margin-top: 20px; text-align: left;">
                     <label>Your Name</label>
                     <input type="text" id="nameInput" class="modal-input" placeholder="e.g. John Doe">
                 </div>
 
-
-                <div class="input-group">
-                    <label for="apiKeyInput">VideoDB API Key</label>
+                <div class="input-group" style="margin-top: 15px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-size: 11px; font-weight: 600; color: #888;">API KEY</label>
+                        <a href="#" onclick="window.configAPI.openExternalLink('https://console.videodb.io/dashboard')"
+                            style="font-size: 11px; color: #4CAF50; text-decoration: none; font-weight: 500;">
+                            Get API Key
+                        </a>
+                    </div>
                     <div class="password-input-wrapper">
-                        <input type="password" id="apiKeyInput" class="modal-input" placeholder="sk-...">
+                        <input type="password" id="apiKeyInput" class="modal-input" placeholder="sk-..." style="font-family: monospace;">
                         <button id="toggleApiKey" class="password-toggle">👁️</button>
                     </div>
                 </div>
 
-                <div class="advanced-toggle" id="toggleAdvanced">
-                    <span>⚙️ Advanced Configuration</span>
-                    <span id="advancedArrow">▼</span>
-                </div>
+                <div id="onboardingError" class="error-message" style="margin-top: 15px;"></div>
 
-                <div class="advanced-section" id="advancedSection">
-                    <div class="config-group">
-                        <label>Backend URL</label>
-                        <input type="text" id="modal-backend-url" class="modal-input"
-                            style="font-size:12px; padding:8px;" disabled>
-                    </div>
-                    <div class="config-group">
-                        <label>Callback URL</label>
-                        <input type="text" id="modal-callback-url" class="modal-input"
-                            style="font-size:12px; padding:8px;" placeholder="Auto-configured via Ngrok" disabled>
-                        <div style="font-size: 11px; color: #666; margin-top: 4px;">
-                            This will be automatically fetched from the server after you connect.
-                        </div>
-                    </div>
-                </div>
-
-                <button id="connectBtn" class="primary-btn">Connect & Start</button>
-                <div id="onboardingError" class="error-message"></div>
-
-                <a href="https://www.npmjs.com/package/videodb" target="_blank" class="powered-by-link">
-                    Powered by <strong style="color: #ccc;">VideoDB SDK</strong>
-                </a>
+                <button id="connectBtn" class="primary-btn" style="width: 100%; margin-top: 20px;">Connect</button>
             </div>
         </div>
     </div>

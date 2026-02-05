@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, shell, systemPreferences, Notification } = 
 const path = require('path');
 const fs = require('fs');
 const { CaptureClient } = require('videodb/capture');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 
 
@@ -15,7 +15,7 @@ let captureClient = null;
 // Configuration
 
 const CONFIG_FILE = path.join(app.getPath('userData'), 'config.json');
-const RUNTIME_FILE = path.join(__dirname, 'runtime.json');
+const RUNTIME_FILE = path.join(__dirname, '..', 'runtime.json');
 
 let appConfig = {
   accessToken: null,
@@ -395,6 +395,15 @@ ipcMain.handle('recorder-stop-recording', async (event, sessionId) => {
       await captureClient.stopCaptureSession();
       console.log('Capture session stopped');
 
+      // Shutdown the capture client to release the binary
+      try {
+        await captureClient.shutdown();
+        console.log('CaptureClient shutdown complete');
+      } catch (shutdownErr) {
+        console.warn('CaptureClient shutdown warning:', shutdownErr.message);
+      }
+      captureClient = null;
+
       // Manually emit recording:stopped event to update UI
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('recorder-event', {
@@ -733,7 +742,7 @@ ipcMain.handle('camera-show', async () => {
 
     // Lazy load camera.html on first show
     if (!cameraLoaded) {
-      cameraWindow.loadFile('camera.html');
+      cameraWindow.loadFile(path.join(__dirname, 'camera.html'));
       cameraLoaded = true;
       // Debug: Open DevTools for camera window (remove in production)
       // cameraWindow.webContents.openDevTools({ mode: 'detach' });
@@ -774,7 +783,7 @@ function createHistoryWindow() {
     }
   });
 
-  historyWindow.loadFile('history.html');
+  historyWindow.loadFile(path.join(__dirname, 'history.html'));
 
   historyWindow.on('closed', () => {
     historyWindow = null;
@@ -827,7 +836,7 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Open DevTools in development
   // mainWindow.webContents.openDevTools();
