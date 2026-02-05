@@ -29,16 +29,20 @@ This app consists of two parts running locally:
 2.  **Install Dependencies**:
     ```bash
     # Using pip (with test PyPI)
-    pip install --index-url https://test.pypi.org/simple/ \
+    pip install --no-cache-dir \
+      --index-url https://test.pypi.org/simple/ \
       --extra-index-url https://pypi.org/simple/ \
       -r requirements.txt
 
     # OR using uv
-    uv pip install --index-url https://test.pypi.org/simple/ \
+    uv pip install --no-cache-dir \
+      --index-url https://test.pypi.org/simple/ \
       --extra-index-url https://pypi.org/simple/ \
       --index-strategy unsafe-best-match \
       -r requirements.txt
     ```
+
+    > **Note**: The `--no-cache-dir` flag ensures you get the latest version from TestPyPI instead of a potentially outdated cached version.
 
 3.  **Configure Environment**:
     Copy `.env.example` to `.env` and add your API key:
