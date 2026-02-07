@@ -107,6 +107,21 @@ export class TranscriptBufferService extends EventEmitter {
       processedByAgent: false,
     };
 
+    // DEBUG: Log segment creation for WPM debugging
+    if (rawData.is_final) {
+      log.info({
+        channel,
+        text: rawData.text.substring(0, 40),
+        rawStart: rawData.start,
+        rawEnd: rawData.end,
+        callStart,
+        relativeStart: startTime,
+        relativeEnd: endTime,
+        duration: endTime - startTime,
+        wordCount: rawData.text.trim().split(/\s+/).filter((w: string) => w.length > 0).length,
+      }, '[BUFFER DEBUG] Final segment added');
+    }
+
     // Add to in-memory buffer
     const callSegments = this.segments.get(sessionId)!;
     callSegments.push(segment);

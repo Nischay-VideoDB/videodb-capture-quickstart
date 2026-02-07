@@ -373,11 +373,11 @@ export class SalesCopilotService extends EventEmitter {
     if (!this.callState?.isActive) return;
 
     const segments = this.transcriptBuffer.getFinalSegments(this.callState.sessionId);
-    const metrics = this.metricsService.calculate(segments);
+    const callDuration = (Date.now() - this.callState.startTime) / 1000;
+    const metrics = this.metricsService.calculate(segments, callDuration);
     const health = this.metricsService.getConversationHealthScore(metrics);
     const sentiment = this.sentimentAnalyzer.getSentimentTrend(segments);
     const playbookSnapshot = this.playbookTracker.getSnapshot();
-    const callDuration = (Date.now() - this.callState.startTime) / 1000;
 
     // Emit metrics update
     this.emit('metrics-update', { metrics, health });
@@ -489,7 +489,7 @@ export class SalesCopilotService extends EventEmitter {
     const segments = this.transcriptBuffer.getFinalSegments(sessionId);
 
     // Calculate final metrics
-    const metrics = this.metricsService.calculate(segments);
+    const metrics = this.metricsService.calculate(segments, duration);
 
     // Finalize playbook
     const playbookSnapshot = await this.playbookTracker.finalize();
@@ -573,7 +573,8 @@ export class SalesCopilotService extends EventEmitter {
     if (!this.callState?.isActive) return null;
 
     const segments = this.transcriptBuffer.getFinalSegments(this.callState.sessionId);
-    return this.metricsService.calculate(segments);
+    const callDuration = (Date.now() - this.callState.startTime) / 1000;
+    return this.metricsService.calculate(segments, callDuration);
   }
 
   /**

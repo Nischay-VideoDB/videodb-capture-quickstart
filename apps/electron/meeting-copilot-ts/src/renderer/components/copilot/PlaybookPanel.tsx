@@ -218,8 +218,8 @@ export function PlaybookPanel({ className, compact = false }: PlaybookPanelProps
   }
 
   return (
-    <Card className={cn("", className)}>
-      <CardHeader className="pb-2">
+    <Card className={cn("flex flex-col overflow-hidden", className)}>
+      <CardHeader className="pb-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
@@ -230,10 +230,10 @@ export function PlaybookPanel({ className, compact = false }: PlaybookPanelProps
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4 min-h-0 flex-1 overflow-hidden p-4 pt-0">
         <CoverageProgress snapshot={playbook} />
 
-        <ScrollArea className="max-h-[350px]">
+        <ScrollArea className="flex-1 -mx-4 px-4">
           <div className="space-y-2 pr-2">
             {playbook.items.map((item) => (
               <PlaybookItemRow
@@ -250,7 +250,7 @@ export function PlaybookPanel({ className, compact = false }: PlaybookPanelProps
 
         {/* Recommendations */}
         {playbook.recommendations && playbook.recommendations.length > 0 && (
-          <div className="pt-2 border-t">
+          <div className="pt-2 border-t shrink-0">
             <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
               <Lightbulb className="h-3 w-3" />
               Recommendations

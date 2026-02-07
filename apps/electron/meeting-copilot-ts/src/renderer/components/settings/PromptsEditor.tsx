@@ -22,7 +22,7 @@ interface Setting {
   value: string;
   category: 'prompt' | 'config' | 'threshold';
   label: string;
-  description?: string;
+  description?: string | null;
 }
 
 function PromptCard({

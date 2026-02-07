@@ -12,7 +12,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import type { Recording } from '../../../shared/schemas/recording.schema';
-import { formatDuration, formatRelativeTime } from '../../lib/utils';
+import { formatDuration, formatRelativeTime, unwrapMarkdownCodeBlock } from '../../lib/utils';
 import { electronAPI } from '../../api/ipc';
 
 interface RecordingDetailsModalProps {
@@ -137,7 +137,7 @@ export function RecordingDetailsModal({
                       ),
                     }}
                   >
-                    {recording.insights}
+                    {unwrapMarkdownCodeBlock(recording.insights)}
                   </ReactMarkdown>
                 </div>
               </div>

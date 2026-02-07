@@ -59,6 +59,16 @@ export function useGlobalRecorderEvents() {
           if (event.data && transcription.enabled) {
             const transcript = event.data as TranscriptEvent;
             if (transcript.isFinal) {
+              // DEBUG: Log all final transcripts
+              console.log('[TRANSCRIPT FINAL]', {
+                source: transcript.source,
+                text: transcript.text.substring(0, 50) + (transcript.text.length > 50 ? '...' : ''),
+                start: transcript.start,
+                end: transcript.end,
+                duration: transcript.end - transcript.start,
+                wordCount: transcript.text.trim().split(/\s+/).filter(w => w.length > 0).length,
+              });
+
               transcription.finalizePending(transcript.source, transcript.text);
             } else {
               transcription.updatePending(transcript.source, transcript.text);

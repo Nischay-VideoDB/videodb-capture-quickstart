@@ -28,9 +28,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <div className="flex flex-col h-full w-16 border-r bg-muted/30">
-      {/* Window drag region - space for macOS traffic lights at y:16 */}
-      <div className="h-14 drag-region" />
-
       {/* Navigation */}
       <nav className="flex-1 flex flex-col items-center gap-2 py-4">
         {tabs.map(({ id, icon: Icon, label }) => (

@@ -70,9 +70,27 @@ export class ConversationMetricsService {
   /**
    * Calculate all metrics from segments
    */
-  calculate(segments: TranscriptSegmentData[]): ConversationMetrics {
+  calculate(segments: TranscriptSegmentData[], elapsedTimeSeconds?: number): ConversationMetrics {
     const meSegments = segments.filter(s => s.isFinal && s.channel === 'me');
     const themSegments = segments.filter(s => s.isFinal && s.channel === 'them');
+
+    // DEBUG: Log segment info for WPM calculation
+    if (meSegments.length > 0) {
+      const totalWords = meSegments.reduce((sum, s) => sum + s.text.trim().split(/\s+/).filter(w => w.length > 0).length, 0);
+      const totalDuration = meSegments.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
+      log.info({
+        meSegmentCount: meSegments.length,
+        totalWords,
+        totalDuration,
+        elapsedTimeSeconds,
+        sampleSegment: meSegments[0] ? {
+          text: meSegments[0].text.substring(0, 30),
+          startTime: meSegments[0].startTime,
+          endTime: meSegments[0].endTime,
+          duration: meSegments[0].endTime - meSegments[0].startTime,
+        } : null,
+      }, '[METRICS DEBUG] Me segments for WPM');
+    }
 
     const meDuration = this.calculateDuration(meSegments);
     const themDuration = this.calculateDuration(themSegments);
@@ -81,16 +99,18 @@ export class ConversationMetricsService {
     const meWordCount = this.countWords(meSegments);
     const themWordCount = this.countWords(themSegments);
 
-    const callDuration = segments.length > 0
+    // Calculate call duration from segments or use provided elapsed time
+    const callDurationFromSegments = segments.length > 0
       ? Math.max(...segments.map(s => s.endTime))
       : 0;
+    const callDuration = Math.max(callDurationFromSegments, elapsedTimeSeconds || 0);
 
     return {
       talkRatio: {
         me: totalDuration > 0 ? meDuration / totalDuration : 0.5,
         them: totalDuration > 0 ? themDuration / totalDuration : 0.5,
       },
-      pace: this.calculatePace(meSegments),
+      pace: this.calculatePace(meSegments, callDuration),
       questionsAsked: this.countQuestions(meSegments),
       monologueDetected: this.detectMonologue(meSegments),
       longestMonologue: this.findLongestMonologue(meSegments),
@@ -115,8 +135,8 @@ export class ConversationMetricsService {
   /**
    * Calculate metrics with trend comparison
    */
-  calculateWithTrend(sessionId: string, segments: TranscriptSegmentData[]): MetricsTrend {
-    const current = this.calculate(segments);
+  calculateWithTrend(sessionId: string, segments: TranscriptSegmentData[], elapsedTimeSeconds?: number): MetricsTrend {
+    const current = this.calculate(segments, elapsedTimeSeconds);
     const previous = this.previousMetrics.get(sessionId);
 
     // Store current for next comparison
@@ -166,14 +186,40 @@ export class ConversationMetricsService {
 
   /**
    * Calculate words per minute
+   * Falls back to call duration if segment durations are not available
    */
-  private calculatePace(segments: TranscriptSegmentData[]): number {
+  private calculatePace(segments: TranscriptSegmentData[], callDurationSeconds?: number): number {
     if (segments.length === 0) return 0;
 
     const totalWords = this.countWords(segments);
-    const totalMinutes = this.calculateDuration(segments) / 60;
 
-    return totalMinutes > 0 ? Math.round(totalWords / totalMinutes) : 0;
+    // First try to use actual speaking duration from segments
+    const speakingDuration = this.calculateDuration(segments);
+
+    // If we have valid speaking duration, use it
+    if (speakingDuration > 0) {
+      const speakingMinutes = speakingDuration / 60;
+      return speakingMinutes > 0 ? Math.round(totalWords / speakingMinutes) : 0;
+    }
+
+    // Fallback: estimate based on call duration (assume ~40% speaking time)
+    if (callDurationSeconds && callDurationSeconds > 0 && totalWords > 0) {
+      // Estimate speaking time as 40% of call duration for "me" channel
+      const estimatedSpeakingMinutes = (callDurationSeconds * 0.4) / 60;
+      if (estimatedSpeakingMinutes > 0) {
+        return Math.round(totalWords / estimatedSpeakingMinutes);
+      }
+    }
+
+    // Last fallback: if we have words but no duration info, estimate based on average WPM
+    // Average speaking rate is ~130 WPM, so we can reverse-estimate
+    if (totalWords > 0 && segments.length > 0) {
+      // Assume each segment represents ~3 seconds of speech on average
+      const estimatedMinutes = (segments.length * 3) / 60;
+      return estimatedMinutes > 0 ? Math.round(totalWords / estimatedMinutes) : 130; // Default to average
+    }
+
+    return 0;
   }
 
   /**

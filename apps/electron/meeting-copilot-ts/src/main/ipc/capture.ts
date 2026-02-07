@@ -108,6 +108,20 @@ async function listenForMessages(ws: WebSocketConnection, source: 'mic' | 'syste
         const start = (msgData.start ?? msg.start) as number;
         const end = (msgData.end ?? msg.end) as number;
 
+        // DEBUG: Log raw WebSocket transcript data
+        if (isFinal) {
+          logger.info({
+            source,
+            text: text.substring(0, 40),
+            start,
+            end,
+            duration: end - start,
+            hasStart: start !== undefined && start !== null,
+            hasEnd: end !== undefined && end !== null,
+            rawMsgData: JSON.stringify(msgData).substring(0, 200),
+          }, '[WS TRANSCRIPT] Final transcript from WebSocket');
+        }
+
         const transcriptEvent: TranscriptEvent = {
           text,
           isFinal,

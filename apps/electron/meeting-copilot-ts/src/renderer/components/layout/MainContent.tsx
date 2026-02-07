@@ -8,9 +8,9 @@ interface MainContentProps {
 export function MainContent({ title, children }: MainContentProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header with drag region - h-14 matches sidebar spacing for traffic lights */}
-      <header className="h-14 flex items-center px-4 border-b drag-region">
-        <h1 className="text-lg font-semibold no-drag">{title}</h1>
+      {/* Page header */}
+      <header className="h-12 flex items-center px-6 border-b bg-background shrink-0">
+        <h1 className="text-lg font-semibold">{title}</h1>
       </header>
 
       {/* Content */}

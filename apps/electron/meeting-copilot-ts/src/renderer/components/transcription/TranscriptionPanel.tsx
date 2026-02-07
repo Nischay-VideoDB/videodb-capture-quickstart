@@ -1,11 +1,150 @@
+/**
+ * Transcription Panel Component
+ *
+ * Modern chat-like interface for live transcription:
+ * - Avatar indicators (Me/Customer)
+ * - Timestamp badges
+ * - Styled message bubbles
+ * - Objection detection highlighting
+ * - Auto-scroll to latest
+ */
+
 import React, { useEffect, useRef } from 'react';
-import { Mic, Volume2 } from 'lucide-react';
+import { Mic, Volume2, Bookmark } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Switch } from '../ui/switch';
-import { useTranscriptionStore } from '../../stores/transcription.store';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { useTranscriptionStore, TranscriptItem } from '../../stores/transcription.store';
 import { useSessionStore } from '../../stores/session.store';
 import { cn } from '../../lib/utils';
+
+interface TranscriptMessageProps {
+  item: TranscriptItem;
+  isLive?: boolean;
+}
+
+function TranscriptMessage({ item, isLive }: TranscriptMessageProps) {
+  const isMe = item.source === 'mic';
+
+  // Format timestamp from epoch to MM:SS relative to recording start
+  const formatTime = (timestamp: number) => {
+    // For now, just show time since we don't have recording start time here
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div
+      className={cn(
+        'group relative animate-in slide-in-from-bottom-2 duration-300',
+        isLive && 'opacity-90'
+      )}
+    >
+      <div className="flex gap-3">
+        {/* Avatar */}
+        <div
+          className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-1',
+            isMe
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+              : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+          )}
+        >
+          {isMe ? (
+            <Mic className="w-4 h-4" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 max-w-3xl">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={cn(
+                'text-xs font-medium',
+                isMe ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'
+              )}
+            >
+              {isMe ? 'You' : 'Customer'}
+            </span>
+            <span className="text-xs text-slate-400">{formatTime(item.timestamp)}</span>
+            {isLive && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0 h-4">
+                LIVE
+              </Badge>
+            )}
+          </div>
+
+          <div
+            className={cn(
+              'rounded-2xl px-4 py-3 text-sm leading-relaxed',
+              isMe
+                ? 'bg-blue-50 dark:bg-blue-950/30 text-slate-900 dark:text-slate-100'
+                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100',
+              isLive && 'italic opacity-80'
+            )}
+          >
+            {item.text}
+          </div>
+        </div>
+
+        {/* Quick Actions (on hover) */}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-6">
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Bookmark">
+            <Bookmark className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PendingMessage({ text, source }: { text: string; source: 'mic' | 'system_audio' }) {
+  const isMe = source === 'mic';
+
+  return (
+    <div className="flex gap-3 opacity-60">
+      <div
+        className={cn(
+          'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-1',
+          isMe
+            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+            : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+        )}
+      >
+        {isMe ? <Mic className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+      </div>
+      <div className="flex-1 max-w-3xl">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className={cn(
+              'text-xs font-medium',
+              isMe ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'
+            )}
+          >
+            {isMe ? 'You' : 'Customer'}
+          </span>
+          <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 animate-pulse">
+            Speaking...
+          </Badge>
+        </div>
+        <div
+          className={cn(
+            'rounded-2xl px-4 py-3 text-sm leading-relaxed italic',
+            isMe
+              ? 'bg-blue-50/50 dark:bg-blue-950/20'
+              : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50'
+          )}
+        >
+          {text}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function TranscriptionPanel() {
   const { items, enabled, pendingMic, pendingSystemAudio, setEnabled } = useTranscriptionStore();
@@ -17,98 +156,71 @@ export function TranscriptionPanel() {
   // Auto-scroll to bottom when new items arrive
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      }
     }
   }, [items, pendingMic, pendingSystemAudio]);
 
-  const getSourceIcon = (source: 'mic' | 'system_audio') => {
-    return source === 'mic' ? Mic : Volume2;
-  };
-
-  const getSourceLabel = (source: 'mic' | 'system_audio') => {
-    return source === 'mic' ? 'You' : 'Meeting';
-  };
-
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3 flex-shrink-0">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 flex-shrink-0 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Live Transcription</CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {enabled ? 'Enabled' : 'Disabled'}
-            </span>
-            <Switch
-              checked={enabled}
-              onCheckedChange={setEnabled}
-              disabled={isRecording}
-            />
+          <div>
+            <CardTitle className="text-base font-semibold">Live Transcription</CardTitle>
+            <p className="text-xs text-slate-500 mt-0.5">Real-time conversation feed</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" className="gap-2 h-8">
+              <Bookmark className="w-3 h-3" />
+              Bookmark
+            </Button>
+            <div className="flex items-center gap-2 pl-3 border-l">
+              <span className="text-xs text-muted-foreground">
+                {enabled ? 'Enabled' : 'Disabled'}
+              </span>
+              <Switch checked={enabled} onCheckedChange={setEnabled} disabled={isRecording} />
+            </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-4" ref={scrollRef}>
-          {items.length === 0 && !pendingMic && !pendingSystemAudio ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-              {enabled
-                ? isRecording
-                  ? 'Waiting for speech...'
-                  : 'Start recording to see transcription'
-                : 'Enable transcription to see live text'}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => {
-                const Icon = getSourceIcon(item.source);
-                return (
-                  <div key={item.id} className="flex gap-2">
-                    <div
-                      className={cn(
-                        'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center',
-                        item.source === 'mic' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                      )}
-                    >
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {getSourceLabel(item.source)}
-                      </p>
-                      <p className="text-sm">{item.text}</p>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Pending transcripts */}
-              {pendingMic && (
-                <div className="flex gap-2 opacity-60">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                    <Mic className="h-3 w-3" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">You</p>
-                    <p className="text-sm italic">{pendingMic}</p>
-                  </div>
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <ScrollArea className="h-full" ref={scrollRef}>
+          <div className="p-6 space-y-4">
+            {items.length === 0 && !pendingMic && !pendingSystemAudio ? (
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                  <Mic className="w-8 h-8 text-slate-400" />
                 </div>
-              )}
+                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                  {enabled
+                    ? isRecording
+                      ? 'Waiting for speech...'
+                      : 'Start recording to see transcription'
+                    : 'Enable transcription to see live text'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {enabled && !isRecording && 'Click the Start Recording button above'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {items.map((item) => (
+                  <TranscriptMessage key={item.id} item={item} />
+                ))}
 
-              {pendingSystemAudio && (
-                <div className="flex gap-2 opacity-60">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                    <Volume2 className="h-3 w-3" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">Meeting</p>
-                    <p className="text-sm italic">{pendingSystemAudio}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                {/* Pending transcripts */}
+                {pendingMic && <PendingMessage text={pendingMic} source="mic" />}
+                {pendingSystemAudio && <PendingMessage text={pendingSystemAudio} source="system_audio" />}
+              </>
+            )}
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>
   );
 }
+
+export default TranscriptionPanel;
