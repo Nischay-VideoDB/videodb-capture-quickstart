@@ -22,18 +22,13 @@ A Loom-style screen recording app built with Electron and the VideoDB Capture SD
 
 ## Quick Start
 
-**Prerequisites**: Node.js v16+, macOS
-
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Setup (enter your VideoDB API key)
-npm run setup
-
-# 3. Run
+npm run setup    # Enter your VideoDB API key
 npm start
 ```
+
+Works on **macOS**, **Linux**, and **Windows** (CMD, PowerShell, or Git Bash).
 
 Get your API key from [console.videodb.io](https://console.videodb.io).
 
