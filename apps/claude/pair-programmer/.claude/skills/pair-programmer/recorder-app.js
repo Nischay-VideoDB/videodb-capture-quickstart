@@ -197,8 +197,8 @@ const INDEXING_CONFIG = {
   visual: {
     enabled: config.visual_index?.enabled !== false,
     prompt: config.visual_index?.prompt || "Describe what is visible on the screen. Focus on code, text, UI elements, and any relevant technical details.",
-    batch_time: config.visual_index?.batch_time || 10,
-    frame_count: config.visual_index?.frame_count || 2,
+    batch_time: config.visual_index?.batch_time || 2,
+    frame_count: config.visual_index?.frame_count || 3,
   },
   system_audio: {
     enabled: config.system_audio_index?.enabled !== false,
@@ -231,6 +231,9 @@ let captureSession = null; // CaptureSession object
 let captureClient = null; // CaptureClient for recording
 let wsConnection = null; // WebSocket for real-time events
 
+// App startup: tray is shown immediately; menu shows "Starting..." until this is true
+let startupComplete = false;
+
 // Recording state
 let recording = {
   active: false,
@@ -238,7 +241,7 @@ let recording = {
   sessionId: null,
   startTime: null,
   channels: null,
-  rtstreams: null, // [{ rtstream_id, name, channel_id }] from webhook; kept after stop for search
+  rtstreams: null, // [{ rtstream_id, name, scene_index_id, index_type }] from webhook; enriched after indexing
   failed: null, // { code, message } when capture_session.failed
 };
 
@@ -524,6 +527,11 @@ async function startIndexingForRTStreams(rtstreams) {
         continue;
       }
 
+      // Find matching entry in recording.rtstreams to enrich with index ID
+      const rtstreamEntry = (recording.rtstreams || []).find(
+        (r) => r.rtstream_id === rtstream_id
+      );
+
       console.log(`[Indexing] Processing RTStream: ${rtstream_id} (${name}) - media_types: ${mediaTypes}`);
 
       try {
@@ -550,9 +558,12 @@ async function startIndexingForRTStreams(rtstreams) {
           console.log(`[Indexing] Starting visual indexing for ${name}:`, JSON.stringify(visualOpts, null, 2));
           
           const sceneIndex = await rtstream.indexVisuals(visualOpts);
+          if (sceneIndex && rtstreamEntry) {
+            rtstreamEntry.scene_index_id = sceneIndex.rtstreamIndexId;
+            rtstreamEntry.index_type = "screen";
+          }
           if (sceneIndex) {
-            await sceneIndex.start();
-            console.log(`✓ Visual indexing started for ${name} (index: ${sceneIndex.rtstreamIndexId})`);
+            console.log(`✓ Visual index created for ${name} (index: ${sceneIndex.rtstreamIndexId})`);
           }
         } else if (mediaTypes.includes("audio")) {
           // Determine if this is mic or system_audio based on stream name
@@ -576,9 +587,12 @@ async function startIndexingForRTStreams(rtstreams) {
           console.log(`[Indexing] Starting ${indexType} indexing for ${name}:`, JSON.stringify(audioOpts, null, 2));
           
           const audioIndex = await rtstream.indexAudio(audioOpts);
+          if (audioIndex && rtstreamEntry) {
+            rtstreamEntry.scene_index_id = audioIndex.rtstreamIndexId;
+            rtstreamEntry.index_type = indexType;
+          }
           if (audioIndex) {
-            await audioIndex.start();
-            console.log(`✓ ${indexType} indexing started for ${name} (index: ${audioIndex.rtstreamIndexId})`);
+            console.log(`✓ ${indexType} index created for ${name} (index: ${audioIndex.rtstreamIndexId})`);
           }
         } else {
           console.log(`[Indexing] Unknown media types for ${name}:`, mediaTypes);
@@ -587,6 +601,8 @@ async function startIndexingForRTStreams(rtstreams) {
         console.error(`[Indexing] Failed to start indexing for ${rtstream_id}:`, e.message);
       }
     }
+
+    console.log("[Indexing] RTStreams with indexes:", JSON.stringify(recording.rtstreams, null, 2));
 
     // Listen to WebSocket events for indexing results
     listenToWebSocketEvents();
@@ -621,7 +637,6 @@ async function listenToWebSocketEvents() {
         });
       } else if (channel === "visual_index") {
         const text = ev.data?.text;
-        console.log(`[WS] Scene: ${text?.substring(0, 50)}...`);
         contextBuffer.add("screen", {
           text: text,
           start: ev.data?.start,
@@ -631,7 +646,6 @@ async function listenToWebSocketEvents() {
         const type = (ev.rtstream_name || "").includes("system")
           ? "system_audio"
           : "mic";
-        console.log(`[WS] Audio (${type}): ${text?.substring(0, 50)}...`);
         contextBuffer.add(type, { text: text, start: ev.data?.start });
       } else if (channel === "capture_session") {
         const status = ev.data?.status;
@@ -880,6 +894,7 @@ function pushOverlayStatus() {
 function showOverlay(text, options = {}) {
   const loading = options.loading === true;
   const payload = { text: text != null ? String(text) : "", loading };
+  console.log("[Overlay]", payload.text || "(loading)");
   const win = createOverlayWindow();
 
   const send = () => {
@@ -916,22 +931,11 @@ ipcMain.on("overlay-close", () => hideOverlay());
 
 function createTrayIcon(isRecording) {
   const size = 22;
-  const canvas = require("electron").nativeImage.createEmpty();
-
-  // Simple colored circle
   const color = isRecording ? "#ff3b30" : "#8e8e93";
-  const svg = `
-    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${
-    size / 2 - 2
-  }" fill="${color}"/>
-    </svg>
-  `;
-
-  return require("electron").nativeImage.createFromBuffer(Buffer.from(svg), {
-    width: size,
-    height: size,
-  });
+  const svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="${color}"/></svg>`;
+  return require("electron").nativeImage.createFromDataURL(
+    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)
+  );
 }
 
 function getRecordingDuration() {
@@ -945,6 +949,18 @@ function getRecordingDuration() {
 function buildTrayMenu() {
   const duration = getRecordingDuration();
   const menu = [];
+
+  if (!startupComplete) {
+    menu.push({ label: "Starting...", enabled: false });
+    menu.push({ type: "separator" });
+    menu.push({ label: "Start Recording", enabled: false });
+    menu.push({ type: "separator" });
+    menu.push({ label: "Show Overlay", click: () => showOverlay("VideoDB Recorder Starting...") });
+    menu.push({ label: "Hide Overlay", click: () => hideOverlay() });
+    menu.push({ type: "separator" });
+    menu.push({ label: "Quit", click: () => app.quit() });
+    return Menu.buildFromTemplate(menu);
+  }
 
   if (recording.active) {
     menu.push({ label: `🔴 Recording ${duration || ""}`, enabled: false });
@@ -1046,45 +1062,15 @@ function buildTrayMenu() {
 
 function updateTray() {
   if (!tray) return;
-
-  // For now, use a simple approach without custom icons
+  tray.setImage(createTrayIcon(recording.active));
   tray.setToolTip(
-    recording.active ? `Recording ${getRecordingDuration() || ""}` : "Ready"
+    !startupComplete ? "Starting..." : recording.active ? `Recording ${getRecordingDuration() || ""}` : "Ready"
   );
   tray.setContextMenu(buildTrayMenu());
 }
 
 function createTray() {
-  // Use a simple built-in approach
-  const iconPath = path.join(__dirname, "icon.png");
-  let icon;
-
-  if (fs.existsSync(iconPath)) {
-    icon = require("electron").nativeImage.createFromPath(iconPath);
-  } else {
-    // Create a simple 16x16 icon
-    icon = require("electron").nativeImage.createEmpty();
-  }
-
-  tray = new Tray(
-    icon.isEmpty()
-      ? require("electron").nativeImage.createFromBuffer(
-          Buffer.from([
-            0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00,
-            0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00,
-            0x00, 0x10, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0xf3, 0xff, 0x61,
-            0x00, 0x00, 0x00, 0x01, 0x73, 0x52, 0x47, 0x42, 0x00, 0xae, 0xce,
-            0x1c, 0xe9, 0x00, 0x00, 0x00, 0x44, 0x49, 0x44, 0x41, 0x54, 0x38,
-            0x4f, 0x63, 0x64, 0x60, 0x60, 0xf8, 0xcf, 0xc0, 0xc0, 0xc0, 0xc4,
-            0x40, 0x24, 0x60, 0x62, 0xa0, 0x00, 0x30, 0x31, 0x90, 0x09, 0x18,
-            0x19, 0x18, 0x18, 0x20, 0x00, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
-          ])
-        )
-      : icon
-  );
+  tray = new Tray(createTrayIcon(false));
 
   tray.setToolTip("VideoDB Recorder");
   tray.setContextMenu(buildTrayMenu());
@@ -1156,6 +1142,7 @@ function startAPIServer() {
             "POST /api/overlay/hide": "Hide overlay",
             "GET /api/context/:type": "Get context (screen/mic/system_audio/all)",
             "POST /api/rtstream/search": "Search within RTStream (body: rtstream_id, query); rtstream_id from GET /api/status",
+            "POST /api/rtstream/update-prompt": "Update scene index prompt (body: rtstream_id, scene_index_id, prompt)",
             "POST /webhook": "VideoDB webhook endpoint",
           },
           usage: {
@@ -1201,6 +1188,48 @@ function startAPIServer() {
                 ? { shots: searchResult.shots }
                 : (searchResult && typeof searchResult === "object" ? { ...searchResult } : { data: searchResult });
               result = { status: "ok", ...serialized };
+            }
+          } catch (e) {
+            result = { status: "error", error: e.message };
+          }
+        }
+      } else if (url === "/api/rtstream/update-prompt" && req.method === "POST") {
+        const rtstreamId = body.rtstream_id || body.rtstreamId;
+        const sceneIndexId = body.scene_index_id || body.sceneIndexId;
+        const prompt = body.prompt;
+        if (!rtstreamId || !sceneIndexId || !prompt || typeof prompt !== "string") {
+          result = { status: "error", error: "rtstream_id, scene_index_id, and prompt (string) required" };
+        } else {
+          try {
+            if (!conn) {
+              result = { status: "error", error: "Not connected to VideoDB" };
+            } else {
+              const coll = await conn.getCollection();
+              const rtstream = await coll.getRTStream(rtstreamId);
+              const sceneIndex = await rtstream.getSceneIndex(sceneIndexId);
+              await sceneIndex.updateSceneIndex(prompt);
+
+              // Persist the updated prompt to config.json
+              const rtstreamEntry = (recording.rtstreams || []).find(
+                (r) => r.rtstream_id === rtstreamId && r.scene_index_id === sceneIndexId
+              );
+              const indexType = rtstreamEntry?.index_type;
+              const configKeyMap = { screen: "visual_index", mic: "mic_index", system_audio: "system_audio_index" };
+              const configKey = configKeyMap[indexType];
+              if (configKey) {
+                try {
+                  const configPath = process.env.CONFIG_PATH || path.join(__dirname, "config.json");
+                  const currentConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+                  if (!currentConfig[configKey]) currentConfig[configKey] = {};
+                  currentConfig[configKey].prompt = prompt;
+                  fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
+                  console.log(`[Update Prompt] Saved to config.json: ${configKey}.prompt`);
+                } catch (e) {
+                  console.error("[Update Prompt] Failed to update config.json:", e.message);
+                }
+              }
+
+              result = { status: "ok", message: "Scene index prompt updated", index_type: indexType || "unknown" };
             }
           } catch (e) {
             result = { status: "error", error: e.message };
@@ -1412,8 +1441,9 @@ function registerAssistantShortcut() {
     console.log(`[Assistant] Shortcut ${shortcut} triggered`);
     showOverlay("", { loading: true });
 
-    console.log("[Assistant] Running claude -c -p '/trigger' ...");
-    const child = spawn("claude", ["-c", "-p", "/trigger"], {
+    console.log("[Assistant] Running claude -p '/trigger' ...");
+    const child = spawn("claude", [ "-c", "-p", "/trigger"], {
+      cwd: PROJECT_ROOT,
       stdio: "inherit",
       shell: false,
     });
@@ -1444,6 +1474,7 @@ function registerAssistantShortcut() {
 
 app.whenReady().then(async () => {
   try {
+    createTray();
     console.log("Starting VideoDB Recorder...");
     console.log("Config:", {
       apiKey: API_KEY ? `${API_KEY.substring(0, 10)}...` : "NOT SET",
@@ -1482,7 +1513,8 @@ app.whenReady().then(async () => {
       }
     }
 
-    createTray();
+    startupComplete = true;
+    updateTray();
 
     // Register global shortcut for assistant
     registerAssistantShortcut();

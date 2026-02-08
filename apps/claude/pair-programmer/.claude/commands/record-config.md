@@ -110,7 +110,7 @@ Location: `.claude/skills/pair-programmer/config.json`
   "context_buffer_size_mic": 50,
   "context_buffer_size_system_audio": 50,
   "assistant_shortcut": "CommandOrControl+Shift+A",
-  "visual_index": { "enabled": true, "prompt": "Describe what is visible on the screen...", "batch_time": 10, "frame_count": 2 },
+  "visual_index": { "enabled": true, "prompt": "Describe what is visible on the screen...", "batch_time": 2, "frame_count": 3 },
   "system_audio_index": { "enabled": true, "prompt": "Summarize what is being said...", "batch_type": "sentence", "batch_value": 3 },
   "mic_index": { "enabled": true, "prompt": "Transcribe the user's speech...", "batch_type": "sentence", "batch_value": 3 }
 }
@@ -134,8 +134,8 @@ Location: `.claude/skills/pair-programmer/config.json`
 |--------|-------|-------------|---------|
 | visual_index | enabled | On/off for screen indexing | true |
 | visual_index | prompt | AI prompt for screen content | "Describe what is visible on the screen..." |
-| visual_index | batch_time | Seconds between screen captures | 10 |
-| visual_index | frame_count | Frames per batch | 2 |
+| visual_index | batch_time | Seconds between screen captures | 2 |
+| visual_index | frame_count | Frames per batch | 3 |
 | system_audio_index | enabled | On/off for system audio | true |
 | system_audio_index | prompt | AI prompt for system audio | "Summarize what is being said..." |
 | system_audio_index | batch_type | "sentence" or "time" | sentence |

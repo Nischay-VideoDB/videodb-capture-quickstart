@@ -10,7 +10,7 @@ Get current recording status from the server.
 curl -s http://127.0.0.1:PORT/api/status
 ```
 
-Response (JSON): `recording` (bool), `sessionId`, `duration`, `bufferCounts` (screen, mic, system_audio), **rtstreams** (array of `{ rtstream_id, name, channel_id }`). Use `rtstream_id` with `POST /api/rtstream/search` to search indexed content.
+Response (JSON): `recording` (bool), `sessionId`, `duration`, `bufferCounts` (screen, mic, system_audio), **rtstreams** (array of `{ rtstream_id, name, scene_index_id, index_type }`). `index_type` is `screen`, `mic`, or `system_audio`. Use `rtstream_id` with `POST /api/rtstream/search` to search indexed content. Use `rtstream_id` + `scene_index_id` with `POST /api/rtstream/update-prompt` to change what the indexing model focuses on.
 
 If the request fails (e.g. connection refused), report that the recorder is not running and suggest running `/record-config` or `bash .claude/hooks/start-recorder.sh`.
 

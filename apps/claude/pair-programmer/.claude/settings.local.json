@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(node:*)",
-      "Read"
+      "Read",
+      "Write"
     ]
   }
 }
