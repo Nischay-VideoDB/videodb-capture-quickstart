@@ -8,7 +8,7 @@ Configure the VideoDB Pair Programmer settings.
 
 ### 1. Check Current Configuration
 
-Read the config file at `.claude/skills/pair-programmer/config.json` using the file read tool.
+Read the config file at `~/.config/videodb/config.json` using the file read tool.
 
 **Decision:**
 
@@ -24,12 +24,17 @@ Wait for the user's response. Never echo or log the full key; mask as `sk-***xyz
 
 ### 3. Save Configuration
 
-Create or update `.claude/skills/pair-programmer/config.json`: set `setup: true`, set `videodb_api_key` to the provided key, use defaults for other fields (see schema below).
+Create or update `~/.config/videodb/config.json`: set `setup: true`, set `videodb_api_key` to the provided key, use defaults for other fields (see schema below). Create the directory `~/.config/videodb/` if it doesn't exist.
+
+**After writing the file, set permissions to 600** (owner read/write only — it contains the API key):
+```bash
+chmod 600 ~/.config/videodb/config.json
+```
 
 ### 4. Start Recorder (if not running)
 
 ```bash
-bash .claude/hooks/start-recorder.sh
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/start-recorder.sh"
 ```
 
 ### 5. Confirm
@@ -44,7 +49,7 @@ Say configuration is complete and recorder is running (or show the script error 
 
 1. **"Go through each setting"** — For users who want to see every option and possibly change several. Ask one setting at a time: state what the option does and its current/default value, then ask for a new value or "keep current". Move to the next only after they answer. Mask the API key when showing current value. For indexing, go into **VideoDB Indexing Configuration** and walk through visual → system_audio → mic (and their sub-fields) in order.
 
-2. **"Change a specific setting"** — Use the organised MCQ hierarchy below. After each change, return to the same level (top-level MCQ, or indexing sub-MCQ, or the chosen index’s sub-field list) so the user can change another or go back.
+2. **"Change a specific setting"** — Use the organised MCQ hierarchy below. After each change, return to the same level (top-level MCQ, or indexing sub-MCQ, or the chosen index's sub-field list) so the user can change another or go back.
 
 ---
 
@@ -96,7 +101,7 @@ If they pick 1: go to **Level 3 — Visual index**. If 2: **Level 3 — System a
 
 Use the schema below for field names, descriptions, and defaults when explaining or writing the file.
 
-Location: `.claude/skills/pair-programmer/config.json`
+Location: `~/.config/videodb/config.json`
 
 ```json
 {
@@ -145,6 +150,6 @@ Location: `.claude/skills/pair-programmer/config.json`
 | mic_index | batch_type | "sentence" or "time" | sentence |
 | mic_index | batch_value | Sentences or seconds per batch | 3 |
 
-Indexing can also be overridden at runtime via `/record`.
+Indexing can also be overridden at runtime via `/pair-programmer:record`.
 
 Security: never expose the full API key; always mask (e.g. `sk-***xyz`).

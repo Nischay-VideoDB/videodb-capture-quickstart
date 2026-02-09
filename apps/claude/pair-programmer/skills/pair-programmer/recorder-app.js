@@ -175,13 +175,15 @@ const TunnelManager = {
 // Configuration
 // =============================================================================
 
+// Config lives in ~/.config/videodb/ so it persists across plugin updates
+const CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE || "/tmp", ".config", "videodb");
+const CONFIG_FILE_PATH = process.env.CONFIG_PATH || path.join(CONFIG_DIR, "config.json");
+
 function loadConfig() {
-  const configPath =
-    process.env.CONFIG_PATH || path.join(__dirname, "config.json");
   try {
-    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return JSON.parse(fs.readFileSync(CONFIG_FILE_PATH, "utf8"));
   } catch (e) {
-    console.warn("No config.json found, using defaults");
+    console.warn("No config.json found at", CONFIG_FILE_PATH, "- using defaults");
     return {};
   }
 }
@@ -222,7 +224,6 @@ let tray = null;
 let pickerWindow = null;
 let overlayWindow = null;
 let webhookUrl = null; // Will be set from config or cloudflare tunnel
-let mcpServerProcess = null; // MCP server child process
 let apiHttpServer = null; // HTTP API server, closed on quit to release port
 
 // VideoDB SDK instances
@@ -287,9 +288,8 @@ function getIndexingConfig() {
   };
 }
 
-// Shared context file for MCP server
-// Project root is 3 levels up from .claude/skills/pair-programmer/
-const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
+// Project root from env (set by hook scripts), fallback to cwd
+const PROJECT_ROOT = process.env.PROJECT_DIR || process.cwd();
 const CONTEXT_FILE = path.join(PROJECT_ROOT, ".context.json");
 
 // Three FIFO queues; each has its own max length from config.
@@ -376,7 +376,7 @@ if (process.platform === "darwin") {
 
 async function initializeVideoDB() {
   if (!API_KEY) {
-    console.error("No API key configured. Set videodb_api_key in config.json");
+    console.error("No API key configured. Run /pair-programmer:record-config to set up.");
     return false;
   }
 
@@ -402,6 +402,7 @@ async function createSession() {
   };
 
   // Add callbackUrl if webhook is configured
+  console.log("this is webhookUrl", webhookUrl)
   if (webhookUrl) {
     sessionConfig.callbackUrl = webhookUrl;
   }
@@ -613,12 +614,7 @@ async function startIndexingForRTStreams(rtstreams) {
 }
 
 async function listenToWebSocketEvents() {
-  if (!wsConnection) {
-    console.log("[WS] No WebSocket connection");
-    return;
-  }
-
-  console.log("[WS] Listening for WebSocket events...");
+  if (!wsConnection) return;
 
   try {
     for await (const ev of wsConnection.receive()) {
@@ -647,18 +643,9 @@ async function listenToWebSocketEvents() {
           ? "system_audio"
           : "mic";
         contextBuffer.add(type, { text: text, start: ev.data?.start });
-      } else if (channel === "capture_session") {
-        const status = ev.data?.status;
-        console.log("[WS] capture_session:", status || ev.data);
-      } else {
-        console.log("[WS] Unknown event:", channel, ev);
       }
     }
-  } catch (e) {
-    if (e.message !== "WebSocket is not connected. Call connect() first.") {
-      console.error("[WS] WebSocket error:", e.message);
-    }
-  }
+  } catch (_) {}
 }
 
 // =============================================================================
@@ -1144,7 +1131,7 @@ function createTray() {
 }
 
 // =============================================================================
-// HTTP API Server (for CLI control + MCP SSE)
+// HTTP API Server
 // =============================================================================
 
 function killProcessOnPort(port) {
@@ -1273,7 +1260,7 @@ function startAPIServer() {
               const sceneIndex = await rtstream.getSceneIndex(sceneIndexId);
               await sceneIndex.updateSceneIndex(prompt);
 
-              // Persist the updated prompt to config.json
+              // Persist the updated prompt to config
               const rtstreamEntry = (recording.rtstreams || []).find(
                 (r) => r.rtstream_id === rtstreamId && r.scene_index_id === sceneIndexId
               );
@@ -1282,14 +1269,12 @@ function startAPIServer() {
               const configKey = configKeyMap[indexType];
               if (configKey) {
                 try {
-                  const configPath = process.env.CONFIG_PATH || path.join(__dirname, "config.json");
-                  const currentConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+                  const currentConfig = loadConfig();
                   if (!currentConfig[configKey]) currentConfig[configKey] = {};
                   currentConfig[configKey].prompt = prompt;
-                  fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
-                  console.log(`[Update Prompt] Saved to config.json: ${configKey}.prompt`);
+                  writeConfig(currentConfig);
                 } catch (e) {
-                  console.error("[Update Prompt] Failed to update config.json:", e.message);
+                  console.error("[Update Prompt] Failed to update config:", e.message);
                 }
               }
 
@@ -1505,8 +1490,11 @@ function registerAssistantShortcut() {
     console.log(`[Assistant] Shortcut ${shortcut} triggered`);
     showOverlay("", { loading: true });
 
-    console.log("[Assistant] Running claude -p '/trigger' ...");
-    const child = spawn("claude", [ "-c", "-p", "/trigger"], {
+    const args = ["-p", "-c", "/pair-programmer:trigger"];
+    if (process.env.PLUGIN_PATH) {
+      args.unshift("--plugin-dir", process.env.PLUGIN_PATH);
+    }
+    const child = spawn("claude", args, {
       cwd: PROJECT_ROOT,
       stdio: "inherit",
       shell: false,
@@ -1552,30 +1540,16 @@ app.whenReady().then(async () => {
     if (!connected) {
       new Notification({
         title: "VideoDB Recorder",
-        body: "Failed to connect. Check your API key in config.json",
+        body: "Failed to connect. Run /pair-programmer:record-config to set up.",
       }).show();
     }
 
-    // Create session early so captureClient exists for permission requests
-    if (connected) {
-      try {
-        await createSession();
-        console.log("✓ Session pre-created for permission requests");
-      } catch (e) {
-        console.warn("Pre-session creation failed:", e.message);
-      }
-    }
-
-    // Request permissions via captureClient (recorder binary) + check status
-    await checkAndRequestPermissions();
-
-    // Start HTTP API server for CLI control
+    // Start HTTP API server (needed before tunnel so port is listening)
     startAPIServer();
 
-    // Setup webhook URL (from config or cloudflare tunnel)
+    // Setup webhook URL (from config or cloudflare tunnel) — must happen before createSession
     if (CONFIGURED_WEBHOOK_URL) {
-      // User provides root URL, we append /webhook route
-      const baseUrl = CONFIGURED_WEBHOOK_URL.replace(/\/+$/, ""); // strip trailing slashes
+      const baseUrl = CONFIGURED_WEBHOOK_URL.replace(/\/+$/, "");
       webhookUrl = `${baseUrl}/webhook`;
       console.log(`✓ Using configured webhook URL: ${webhookUrl}`);
     } else {
@@ -1589,6 +1563,19 @@ app.whenReady().then(async () => {
         webhookUrl = null;
       }
     }
+
+    // Create session (with callbackUrl now that webhook is ready) so captureClient exists for permissions
+    if (connected) {
+      try {
+        await createSession();
+        console.log("✓ Session pre-created for permission requests");
+      } catch (e) {
+        console.warn("Pre-session creation failed:", e.message);
+      }
+    }
+
+    // Request permissions via captureClient (recorder binary) + check status
+    await checkAndRequestPermissions();
 
     startupComplete = true;
     updateTray();
@@ -1659,7 +1646,7 @@ app.on("before-quit", (e) => {
 });
 
 // =============================================================================
-// Export context buffer for external access (e.g., MCP)
+// Export context buffer for external access
 // =============================================================================
 
 module.exports = {
