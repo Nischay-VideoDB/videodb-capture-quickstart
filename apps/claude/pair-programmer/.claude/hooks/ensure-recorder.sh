@@ -3,10 +3,11 @@
 # This runs automatically when a Claude Code session starts
 
 PROJECT_DIR="$CLAUDE_PROJECT_DIR"
-CONFIG_FILE="$PROJECT_DIR/.claude/skills/pair-programmer/config.json"
+SKILL_DIR="$PROJECT_DIR/.claude/skills/pair-programmer"
+CONFIG_FILE="$SKILL_DIR/config.json"
 
 # Check if dependencies are installed (don't auto-install; /record-config does it on demand)
-if [ ! -d "$PROJECT_DIR/node_modules" ] || [ ! -f "$PROJECT_DIR/node_modules/.bin/electron" ]; then
+if [ ! -d "$SKILL_DIR/node_modules" ] || [ ! -f "$SKILL_DIR/node_modules/.bin/electron" ]; then
   echo '⚠️ Dependencies not installed.
 
 Run `/record-config` to set up the recorder (this will install dependencies).'
@@ -53,7 +54,7 @@ if lsof -i :$PORT >/dev/null 2>&1; then
 fi
 
 # Not running - start it in background
-cd "$PROJECT_DIR"
+cd "$SKILL_DIR"
 nohup npm start > /tmp/videodb-recorder.log 2>&1 &
 
 # Wait briefly and verify it started

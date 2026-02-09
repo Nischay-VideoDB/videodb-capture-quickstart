@@ -3,7 +3,8 @@
 # Call this after running /record-config
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
-CONFIG_FILE="$PROJECT_DIR/.claude/skills/pair-programmer/config.json"
+SKILL_DIR="$PROJECT_DIR/.claude/skills/pair-programmer"
+CONFIG_FILE="$SKILL_DIR/config.json"
 
 # Check if config exists
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -30,16 +31,16 @@ if lsof -i :$PORT >/dev/null 2>&1; then
 fi
 
 # Install deps if needed (clean install to avoid extraneous packages)
-if [ ! -d "$PROJECT_DIR/node_modules" ] || [ ! -f "$PROJECT_DIR/node_modules/.bin/electron" ]; then
+if [ ! -d "$SKILL_DIR/node_modules" ] || [ ! -f "$SKILL_DIR/node_modules/.bin/electron" ]; then
   echo "Installing dependencies (this may take a minute for electron)..."
-  cd "$PROJECT_DIR"
+  cd "$SKILL_DIR"
   rm -rf node_modules
   npm install
 fi
 
 # Start recorder
 echo "Starting recorder..."
-cd "$PROJECT_DIR"
+cd "$SKILL_DIR"
 nohup npm start > /tmp/videodb-recorder.log 2>&1 &
 
 # Wait and verify (electron + tunnel can take a few seconds)

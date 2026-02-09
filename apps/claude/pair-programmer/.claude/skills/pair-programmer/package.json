@@ -2,7 +2,7 @@
   "name": "vdb-recorder-demo",
   "version": "1.0.0",
   "description": "VideoDB Recorder - Screen recording with real-time indexing and HTTP API",
-  "main": ".claude/skills/pair-programmer/recorder-app.js",
+  "main": "recorder-app.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging"
