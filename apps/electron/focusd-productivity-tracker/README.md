@@ -9,8 +9,27 @@
 </p>
 
 <p align="center">
-  <a href="https://drive.google.com/uc?export=download&id=1jVwIsWaV0XgbQ-wREyB7dijLUw_3hkME">Download for macOS</a>
+  <a href="https://artifacts.videodb.io/focusd-productivity-tracker/focusd-productivity-tracker-latest.dmg">Download for macOS</a>
 </p>
+
+---
+
+## Installation (Pre-built App)
+
+If you downloaded the pre-built app from the link above:
+
+1. **Mount the DMG** and drag VideoDB Focusd to your Applications folder
+
+2. **Remove quarantine attributes** to allow the app to run:
+   ```bash
+   xattr -cr /Applications/VideoDB\ Focusd.app
+   ```
+
+   This command is required because the app is not yet code-signed. macOS Gatekeeper blocks unsigned apps by default, and this command removes the quarantine flag that prevents the app from launching.
+
+3. **Launch the app** from Applications or Spotlight
+
+4. **Grant system permissions** when prompted (Screen Recording is required)
 
 ---
 
@@ -214,7 +233,3 @@ To reset all data:
 ```
 rm -rf ~/Library/Application\ Support/VideoDB\ Focusd/
 ```
-
-## License
-
-MIT - See [repository license](https://github.com/video-db/videodb-capture-quickstart/blob/main/LICENSE)

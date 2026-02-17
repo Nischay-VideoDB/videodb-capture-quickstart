@@ -44,4 +44,4 @@ npm run setup -- --api-key YOUR_API_KEY
 
 ## License
 
-MIT
+[MIT](LICENSE)

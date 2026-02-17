@@ -189,7 +189,3 @@ Grant these in **System Settings > Privacy & Security**.
 - **Context buffers** are FIFO queues — old entries are dropped as new ones arrive. Nothing is written to disk.
 - The recorder process runs locally and communicates with Claude Code over `localhost`.
 - A **Cloudflare tunnel** is created automatically for webhook delivery and is torn down when the recorder stops.
-
-## License
-
-MIT - See [repository license](https://github.com/video-db/videodb-capture-quickstart/blob/main/LICENSE)

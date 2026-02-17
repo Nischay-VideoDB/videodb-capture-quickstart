@@ -243,7 +243,3 @@ Application data is stored in:
 └── logs/
     └── app-YYYY-MM-DD.log  # Daily log files
 ```
-
-## License
-
-MIT - See [repository license](https://github.com/video-db/videodb-capture-quickstart/blob/main/LICENSE)
