@@ -18,6 +18,12 @@
 
 ---
 
+## Demo
+
+[![Watch the Video](https://github.com/user-attachments/assets/8d1a8cab-0f43-48a5-be1c-4a91b76af90f)](https://stream.videodb.io/v3/published/manifests/8e4aaa85-4195-4e7d-959f-0bfa74ebd3c4.m3u8)
+
+---
+
 ## Installation (Pre-built App)
 
 If you downloaded the pre-built app from the link above:
