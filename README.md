@@ -68,21 +68,19 @@ Each app below is fully functional and can be run locally. They demonstrate diff
 
 | App | Use Case | What It Does | Tech Stack |
 |-----|----------|--------------|------------|
-| **[Pair Programmer](./apps/claude/pair-programmer/README.md)** | 🤖 AI Coding Assistant | Claude Code watches your screen and hears your audio. Hit `Cmd+Shift+A` and ask "what's that error?" — it reads your terminal and answers instantly. | Electron, Node.js, Claude Code |
-| **[Focusd](./apps/electron/focusd-productivity-tracker/README.md)** | 📊 Productivity Tracking | Records your screen all day, understands what you're working on, generates session summaries and daily recaps with actionable insights. | Electron, React, TypeScript, SQLite |
-| **[Sales Copilot](./apps/electron/sales-copilot/README.md)** | 💼 Sales Coaching | Real-time cue cards, sentiment tracking, talk ratio monitoring, and post-call summaries during sales calls. | Electron, React, TypeScript, tRPC |
+| **[Pair Programmer](./examples/claude-pair-programmer/README.md)** | 🤖 AI Coding Assistant | Claude Code watches your screen and hears your audio. Hit `Cmd+Shift+A` and ask "what's that error?" — it reads your terminal and answers instantly. | Electron, Node.js, Claude Code |
+| **[Focusd](./examples/focusd-productivity-tracker/README.md)** | 📊 Productivity Tracking | Records your screen all day, understands what you're working on, generates session summaries and daily recaps with actionable insights. | Electron, React, TypeScript, SQLite |
+| **[Sales Copilot](./examples/sales-copilot/README.md)** | 💼 Sales Coaching | Real-time cue cards, sentiment tracking, talk ratio monitoring, and post-call summaries during sales calls. | Electron, React, TypeScript, tRPC |
 
 ### More Examples
 
 | App | Description |
 |-----|-------------|
-| [Meeting Copilot](./apps/electron/meeting-copilot) | 📞 Live meeting transcription and AI insights |
-| [Loom Clone](./apps/electron/loom-electron) | 🎥 Async video recorder with camera bubble |
-| [Resonant AI](./apps/electron/resonant-ai-recommender) | 🔍 Content recommender from screen context |
-| [Node.js Quickstart](./apps/quickstart/node-quickstart) | ⚡ Minimal example to get started fast |
-| [Python Quickstart](./apps/quickstart/python-quickstart) | 🐍 Python version of quickstart |
+| [Async Recorder](./examples/async-recorder) | 🎥 Async video recorder with camera bubble |
+| [Node.js Quickstart](./quickstart/node-quickstart) | ⚡ Minimal example to get started fast |
+| [Python Quickstart](./quickstart/python-quickstart) | 🐍 Python version of quickstart |
 
-> 💡 **New to VideoDB?** Start with the [Node.js Quickstart](./apps/quickstart/node-quickstart) or [Python Quickstart](./apps/quickstart/python-quickstart) to understand the basics, then explore the featured apps.
+> 💡 **New to VideoDB?** Start with the [Node.js Quickstart](./quickstart/node-quickstart) or [Python Quickstart](./quickstart/python-quickstart) to understand the basics, then explore the featured apps.
 
 ## Architecture
 
