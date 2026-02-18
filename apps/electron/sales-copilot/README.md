@@ -8,6 +8,30 @@
 
 ![Sales Copilot](screenshot.png)
 
+## Download
+
+- **Apple Silicon**: [sales-copilot-1.0.0-arm64.dmg](https://artifacts.videodb.io/sales-copilot/sales-copilot-1.0.0-arm64.dmg)
+- **Apple Intel**: [sales-copilot-1.0.0.dmg](https://artifacts.videodb.io/sales-copilot/sales-copilot-1.0.0.dmg)
+
+---
+
+## Installation (Pre-built App)
+
+If you downloaded the pre-built app from the links above:
+
+1. **Mount the DMG** and drag Sales Copilot to your Applications folder
+
+2. **Remove quarantine attributes** to allow the app to run:
+   ```bash
+   xattr -cr /Applications/Sales\ Copilot.app
+   ```
+
+3. **Launch the app** from Applications or Spotlight
+
+4. **Grant system permissions** when prompted (Microphone and Screen Recording are required)
+
+---
+
 ## Overview
 
 Sales Copilot records your sales calls and provides real-time coaching while you talk. It captures screen, microphone, and system audio through VideoDB's capture SDK, runs dual-channel transcription (your mic vs. customer's system audio), and feeds the conversation into a parallel analysis pipeline that produces sentiment scores, cue cards, nudges, talk ratio monitoring, and playbook tracking — all updated live during the call. When the call ends, it generates a structured summary with action items, objections, and risk assessment.
@@ -27,6 +51,8 @@ Sales Copilot records your sales calls and provides real-time coaching while you
 - **Nudges** - Timely reminders based on conversation context (e.g., "You haven't asked about budget")
 - **Call Summary** - AI-generated summary with key points, action items, objections, and risks
 - **Bookmarking** - Mark important moments during calls for easy reference
+- **MCP Agent Support** - Connect MCP servers and let the app auto-trigger tool calls from conversation context
+- **MCP Result Cards** - Inline tool outputs (including links) shown live during calls
 
 ### Technical
 - **Modern UI** - Built with React, Tailwind CSS, and shadcn/ui
@@ -138,6 +164,35 @@ The copilot pipeline processes conversation in real-time through several paralle
 
 5. **Register with your VideoDB API key** when the app opens
 
+## MCP Server Setup
+
+### Where to Configure
+
+Open **Settings → MCP Servers** in the app.
+
+### How to Add a Server
+
+1. Click **Add Server**
+2. Choose transport:
+   - **stdio** (local command-based MCP server)
+   - **http** (remote MCP endpoint)
+3. Fill required fields (command/args/env or URL/headers)
+4. Save and click **Connect**
+
+### Triggering Behavior
+
+- MCP agent runs automatically during active calls when trigger keywords are detected in transcript context.
+- You can customize trigger keywords from the MCP settings panel.
+- Tool outputs appear in the **MCP Results** panel during the call.
+
+### Capabilities
+
+- Multiple MCP server connections
+- Aggregated tool discovery across connected servers
+- Auto-triggered tool execution from call context
+- Live MCP result rendering (cards, markdown, links, structured fields)
+- Result actions like pin/dismiss while in-call
+
 ## Development
 
 ### Available Scripts
@@ -174,6 +229,7 @@ src/
 │       │   ├── sentiment-analyzer.service.ts
 │       │   ├── summary-generator.service.ts
 │       │   └── transcript-buffer.service.ts
+│       ├── mcp/            # MCP orchestration and tool execution services
 │       ├── llm.service.ts
 │       ├── tunnel.service.ts
 │       └── videodb.service.ts
@@ -185,17 +241,25 @@ src/
 │   │   ├── copilot/        # Copilot UI components
 │   │   ├── history/        # Recording history views
 │   │   ├── layout/         # App layout (sidebar, titlebar)
+│   │   ├── mcp/            # MCP results/status components
 │   │   ├── recording/      # Recording controls
 │   │   ├── settings/       # Settings editors
 │   │   ├── transcription/  # Live transcription panel
 │   │   └── ui/             # shadcn/ui components
 │   ├── hooks/              # Custom React hooks
 │   ├── lib/                # Utilities
-│   └── stores/             # Zustand state stores
+│   └── stores/             # Zustand state stores (session, copilot, mcp)
 └── shared/                 # Shared types & schemas
     ├── schemas/            # Zod validation schemas
     └── types/              # TypeScript types
 ```
+
+### IPC API
+
+The app exposes IPC APIs through the preload script:
+
+- `window.electronAPI.mcp.*` - MCP server and tool operations
+- `window.electronAPI.mcpOn.*` - MCP event subscriptions
 
 ## Permissions (macOS)
 

@@ -25,8 +25,6 @@ If you downloaded the pre-built app from the link above:
    xattr -cr /Applications/VideoDB\ Focusd.app
    ```
 
-   This command is required because the app is not yet code-signed. macOS Gatekeeper blocks unsigned apps by default, and this command removes the quarantine flag that prevents the app from launching.
-
 3. **Launch the app** from Applications or Spotlight
 
 4. **Grant system permissions** when prompted (Screen Recording is required)
